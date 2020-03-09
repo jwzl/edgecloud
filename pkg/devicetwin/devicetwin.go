@@ -1,5 +1,0 @@
-package devicetwin
-
-import (
-
-)

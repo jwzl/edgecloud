@@ -1,15 +1,13 @@
 package mqtt
 
 import (
-	"fmt"
 	"sync"
 	"time"
-	"strings"
 	"k8s.io/klog"
 	"github.com/jwzl/mqtt/client"
-	"github.com/jwzl/wssocket/fifo"
 	"github.com/jwzl/wssocket/model"
-	"github.com/jwzl/edgeOn/msghub/config"
+	mqtt "github.com/eclipse/paho.mqtt.golang"
+	"github.com/jwzl/edgecloud/pkg/eventhub/settings"
 )
 
 
@@ -20,23 +18,20 @@ const (
 	//mqtt topic should has the format:
 	// mqtt/dgtwin/cloud[edge]/{edgeID}/comm for communication.
 	// mqtt/dgtwin/cloud[edge]/{edgeID}/control  for some control message.
-	MQTT_SUBTOPIC_PREFIX	= "mqtt/dgtwin/cloud"
-	MQTT_PUBTOPIC_PREFIX	= "mqtt/dgtwin/edge"
+	//MQTT_SUBTOPIC_PREFIX	= "mqtt/dgtwin/cloud"
+	//MQTT_PUBTOPIC_PREFIX	= "mqtt/dgtwin/edge"
 )
 
 type Client	struct {
-	Settings	*config.MqttConfig
-
-	subTopics	[]string
+	Settings	*settings.MqttSettings
 	// for mqtt send thread.
 	mutex 		sync.RWMutex
 	mqttClient		*client.MQTTClient
 }
 
-func NewMqttClient(setting *config.MqttConfig) *Client {
+func NewMqttClient(setting *settings.MqttSettings) *Client {
 	mc := &Client{
-		Settings: setting,
-		subTopics: make([]string, 0),		
+		Settings: setting,	
 	}
 
 	c := &client.MQTTClient{
@@ -44,8 +39,9 @@ func NewMqttClient(setting *config.MqttConfig) *Client {
 		User:			setting.User,
 		Passwd:			setting.Passwd,	
 		ClientID:		setting.ClientID,
-		keepAliveInterval:	setting.keepAliveInterval,
-		PingTimeout:		setting.PingTimeout,
+		Order:			true,
+		keepAliveInterval:	setting.keepAliveInterval * time.Second,
+		PingTimeout:		setting.PingTimeout * time.Second,
 		MessageChannelDepth: setting.MessageCacheDepth,			
 		CleanSession:	true,
 		FileStorePath: "memory",
@@ -66,16 +62,19 @@ func (mc *Client) Start(){
 	mc.mqttClient.Start()
 
 	// retry to connect.
+retry_connect:
 	err := mc.tryToConnect()
 	if err != nil {
 		klog.Errorf("Client connecte err (%v), Please check your net link", err)	
-		return
+		goto retry_connect
 	}
 }
 
 func (mc *Client) tryToConnect() error {
+	var err error
+
 	for i := 0; i < retryCount; i++ {
-		err := mc.mqttClient.Connect()
+		err = mc.mqttClient.Connect()
 		if err != nil {
 			klog.Errorf("Client connecte err (%v), retry...", err)
 		}else {
@@ -86,10 +85,6 @@ func (mc *Client) tryToConnect() error {
 	}
 
 	return err
-}
-
-func (mc *Client) messageDispatch(topic string, msg *model.Message){
-
 }
 
 //ClientOnConnect
@@ -109,14 +104,17 @@ func (mc *Client) ClientOnLost(client mqtt.Client, err error) {
 * publish the message.
 */
 func (mc *Client) Publish(topic string, msg *model.Message) error {
+	mc.mutex.Lock()
+	defer mc.mutex.Unlock()
+	
 	return mc.mqttClient.Publish(topic, mc.Settings.QOS, mc.Settings.Retain, msg)
 }
 
 /*
 * Subscribe the message.
 */
-func (mc *Client) Subscribe(topic string) error {
-	return mc.mqttClient.Subscribe(topic, mc.Settings.QOS, mc.messageDispatch)
+func (mc *Client) Subscribe(topic string, fn func(topic string, msg *model.Message)) error {
+	return mc.mqttClient.Subscribe(topic, mc.Settings.QOS, fn)
 }
 
 /*
