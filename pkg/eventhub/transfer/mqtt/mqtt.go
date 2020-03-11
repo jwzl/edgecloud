@@ -40,15 +40,15 @@ func NewMqttClient(setting *settings.MqttSettings) *Client {
 		Passwd:			setting.Passwd,	
 		ClientID:		setting.ClientID,
 		Order:			true,
-		keepAliveInterval:	setting.keepAliveInterval * time.Second,
-		PingTimeout:		setting.PingTimeout * time.Second,
+		KeepAliveInterval:	setting.KeepAliveInterval,
+		PingTimeout:		setting.PingTimeout,
 		MessageChannelDepth: setting.MessageCacheDepth,			
 		CleanSession:	true,
 		FileStorePath: "memory",
 		OnConnect:	mc.ClientOnConnect,
 		OnLost:		mc.ClientOnLost,			
 		WillTopic:		"",			//no will topic.	
-		TLSConfig:		setting.tlsConfig,  
+		TLSConfig:		setting.TLSConfig,  
 
 	}
 	mc.mqttClient = c
@@ -89,7 +89,7 @@ func (mc *Client) tryToConnect() error {
 
 //ClientOnConnect
 func (mc *Client) ClientOnConnect(client mqtt.Client) {
-	klog.Infof("Connect to mqtt broker %s Successful.", mc.setting.URL)
+	klog.Infof("Connect to mqtt broker %s Successful.", mc.Settings.URL)
 }
 
 //ClientOnLost

@@ -1,6 +1,7 @@
 package transfer
 
 import (
+	"github.com/jwzl/wssocket/model"
 	"github.com/jwzl/edgecloud/pkg/eventhub/settings"
 	"github.com/jwzl/edgecloud/pkg/eventhub/transfer/mqtt"
 )

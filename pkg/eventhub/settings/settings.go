@@ -1,6 +1,7 @@
 package settings
 
 import (
+	"time"
 	"crypto/tls"
 	"k8s.io/klog"
 	"github.com/jwzl/beehive/pkg/common/config"
@@ -13,9 +14,9 @@ type MqttSettings struct {
 	Passwd			string
 	// tls config
 	TLSConfig 		*tls.Config
-	KeepAliveInterval	int
-	PingTimeout			int  
-	QOS				 	int
+	KeepAliveInterval	time.Duration
+	PingTimeout			time.Duration  
+	QOS				 	byte
 	Retain			   	bool	
 	MessageCacheDepth  	uint
 }
@@ -77,21 +78,21 @@ func GetMqttSetting()(*MqttSettings, error){
 		klog.Infof("eventhub.mqtt.keep-alive-interval is empty")
 		keepAliveInterval = 120
 	}
-	setting.KeepAliveInterval = keepAliveInterval
+	setting.KeepAliveInterval = time.Duration(keepAliveInterval) * time.Second
 
 	pingTimeout, err := config.CONFIG.GetValue("eventhub.mqtt.ping-timeout").ToInt()
 	if err != nil {
 		klog.Infof("eventhub.mqtt.ping-timeout is empty")
 		pingTimeout = 120
 	}
-	setting.PingTimeout = pingTimeout
+	setting.PingTimeout = time.Duration(pingTimeout) * time.Second
 
 	qos, err := config.CONFIG.GetValue("eventhub.mqtt.qos").ToInt()
 	if err != nil {
 		klog.Infof("eventhub.mqtt.qos is empty")
 		qos = 2
 	}
-	setting.QOS = qos
+	setting.QOS = uint8(qos)
 
 	retain, err := config.CONFIG.GetValue("eventhub.mqtt.retain").ToBool()
 	if err != nil {
