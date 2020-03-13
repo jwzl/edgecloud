@@ -2,7 +2,8 @@ package devicetwin
 
 
 type DeviceTwinModule struct {
-	context *context.Context
+	context 	*context.Context
+	dtcontext 	*DTContext
 }
 
 // Register this module.
@@ -50,19 +51,4 @@ func (dtm *DeviceTwinModule) Start(c *context.Context) {
 //Cleanup
 func (dtm *DeviceTwinModule) Cleanup() {
 	dtm.context.Cleanup(dtm.Name())
-}
-
-
-
-type TwinManager struct {
-	//edgeID: DeviceID  
-	edgedevices map[string][]string
-	
-}
-func NewTwinManager () {
-	return TwinManager{}
-}
-
-func (tm * TwinManager) Start() {
-
 }

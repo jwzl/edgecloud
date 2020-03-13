@@ -81,11 +81,11 @@ func (ed *EdgeDescription) RegisterTwins(twinID string) error {
 
 func (ed *EdgeDescription) UnRegisterTwins(twinID string) error {
 	if ed.FindTwins(twinID) != true {
-		ed.deviceIDs = append(ed.deviceIDs, twinID)
 		return errors.New("twin is not exists.")
 	}
 
-	//delete(ed.deviceIDs, twinID)
+	delete(ed.deviceIDs, twinID)
+	return ed.DeleteTwin(twinID)
 }
 
 func (ed *EdgeDescription) getTwin (twinID string) (*common.DigitalTwin, bool) {
