@@ -17,8 +17,9 @@ type DTContext struct {
 	/*
 	* This is all edge in this cluster.
 	*/
-	EdgeMap		*sync.Map
-	EdgeMutex	*sync.Map
+	EdgeMap			*sync.Map
+	EdgeMutex		*sync.Map
+	MessageCache	*sync.Map
 }
 
 func NewDTContext(c *context.Context) *DTContext {
@@ -28,11 +29,13 @@ func NewDTContext(c *context.Context) *DTContext {
 
 	var edges sync.Map
 	var edgesMutex sync.Map
+	var cache sync.Map
 
 	return &DTContext{
 		Context:	c,
 		EdgeMap:	&edges,
 		EdgeMutex:  &edgesMutex,
+		MessageCache: &cache,
 	}
 }
 
@@ -197,4 +200,45 @@ func (dtc *DTContext) GetRawTwin(edgeID, twinID string) ([]byte, error) {
 	}
 
 	return edged.GetRawTwin(twinID)
+}
+
+//SendResponseMessage Send Response conten.
+func (dtc *DTContext) SendResponseMessage(requestMsg *model.Message, content []byte){
+	resource := requestMsg.GetResource()
+
+	modelMsg := dtc.BuildModelMessage(common.CloudName, common.TwinModuleName, 
+					common.DGTWINS_OPS_RESPONSE, resource, content)	
+	modelMsg.SetTag(requestMsg.GetID())	
+	klog.Infof("Send response message (%v)", modelMsg)
+
+	dtc.SendToModule("EventHub", modelMsg)
+}
+
+func (dtc *DTContext) SendTwinMessage(edgeID, operation string, content []byte){
+	resource := edgeID+"/"+common.DGTWINS_RESOURCE_TWINS
+
+	modelMsg := dtc.BuildModelMessage(common.CloudName, common.TwinModuleName, 
+					operation, resource, content)	
+
+	dtc.SendToModule("EventHub", modelMsg)
+}
+
+func (dtc *DTContext) CacheMessage(msg *model.Message){
+	msgID := msg.GetID()
+ 
+	_, exist := dtc.MessageCache.Load(msgID)
+	if !exist {
+		dtc.MessageCache.Store(msgID, msg)
+	}
+}
+
+func (dtc *DTContext) DeleteMsgCache(msg *model.Message){
+	pMsgID := msg.GetTag()
+ 
+	if pMsgID != "" {
+		_, exist := dtc.MessageCache.Load(pMsgID)
+		if exist {
+			dtc.MessageCache.Delete(pMsgID) 
+		}
+	}
 }
