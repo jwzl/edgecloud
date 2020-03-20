@@ -4,10 +4,15 @@
 package eventhub
 
 import(
+	"fmt"
+	"strings"
 	"k8s.io/klog"
+	"github.com/jwzl/edgeOn/common"
+	"github.com/jwzl/wssocket/model"
 	"github.com/jwzl/beehive/pkg/core"
 	"github.com/jwzl/beehive/pkg/core/context"
 	"github.com/jwzl/edgecloud/pkg/eventhub/settings"
+	"github.com/jwzl/edgecloud/pkg/eventhub/transfer"
 )
 
 const (
@@ -90,7 +95,7 @@ func (eh *EventHub) Start(c *context.Context) {
 			topic = fmt.Sprintf("%s/%s/comm", MQTT_PUBTOPIC_PREFIX, edgeID)	
 		}
 
-		err := eh.trans.Publish(topic, msg)
+		err = eh.trans.Publish(topic, msg)
 		if err != nil {
 			klog.Errorf("failed to publish message: %v", err)
 			return

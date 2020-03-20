@@ -1,5 +1,14 @@
 package devicetwin
 
+import(
+	"strings"
+	"k8s.io/klog"
+	"github.com/jwzl/edgeOn/common"
+	"github.com/jwzl/wssocket/model"
+	"github.com/jwzl/beehive/pkg/core"
+	"github.com/jwzl/beehive/pkg/core/context"
+)
+
 const (
 	DGTWINS_EDGE_BIND	= "Bind"
 )
@@ -97,11 +106,23 @@ func (dtm *DeviceTwinModule) doUpStreamMessage(msg *model.Message) {
 			if err != nil {
 				klog.Infof("Add edge info failed")
 			}
-		}else{	
+		}else{
+			//If no cache such message, then, Ignore this message. 
+			if dtm.dtcontext.CacheHasThisMessage(msg) != true {
+				return
+			}	
+
 			respMsg, err := common.UnMarshalResponseMessage(msg)
 			if err != nil {
 				return
 			}	
+
+			if respMsg.Code == common.RequestSuccessCode {
+				// delete this message.
+				dtm.dtcontext.DeleteMsgCache(msg)
+			}else {
+				klog.Warningf("Unexpected message:", respMsg)	
+			}
 		}
 	case common.DGTWINS_OPS_SYNC:
 		twinMsg, err := common.UnMarshalTwinMessage(msg)
@@ -116,7 +137,7 @@ func (dtm *DeviceTwinModule) doUpStreamMessage(msg *model.Message) {
 		}
 		twins := []common.DigitalTwin{*twin}
 
-		err := dtm.dtcontext.UpdateTwin(edgeID, dgTwin)
+		err = dtm.dtcontext.UpdateTwin(edgeID, dgTwin)
 		if err != nil {
 			return
 		}	
@@ -145,7 +166,7 @@ func (dtm *DeviceTwinModule) doDownStreamMessage(msg *model.Message) {
 	case DGTWINS_EDGE_BIND:
 		msg.Router.Target = "edge"
 		//send to event hub.
-		dtc.SendToModule("EventHub", msg)
+		dtm.dtcontext.SendToModule("EventHub", msg)
 		//cache the message.
 		dtm.dtcontext.CacheMessage(msg)	
 	case common.DGTWINS_OPS_CREATE:
@@ -177,16 +198,84 @@ func (dtm *DeviceTwinModule) doDownStreamMessage(msg *model.Message) {
 		//cache the message.
 		dtm.dtcontext.CacheMessage(msg)	 
 	case common.DGTWINS_OPS_UPDATE:	
+		/*
+		* update the twin desired property.
+		*/
 		twinMsg, err := common.UnMarshalTwinMessage(msg)
-	if err != nil {
-		return
-	}	
-	dgTwin := &twinMsg.Twins[0]
+		if err != nil {
+			return
+		}	
+		dgTwin := &twinMsg.Twins[0]
+		//update the local twin property.
+		err = dtm.dtcontext.UpdateTwin(edgeID, dgTwin)
+		if err != nil {
+			return
+		}	
+		klog.Infof("Update successful.") 
+		dtm.dtcontext.SendPropertyMessage(edgeID, common.DGTWINS_OPS_UPDATE, msg.GetContent())
+		//cache the message.
+		dtm.dtcontext.CacheMessage(msg)	
 	case common.DGTWINS_OPS_DELETE:
-	case common.DGTWINS_OPS_GET:
-	case common.DGTWINS_OPS_WATCH
-	}
+		/*
+		* delete the twin by id.
+		*/
+		twinID, isthisType := msg.GetContent().(string)
+		if !isthisType {
+			klog.Warningf("Error format")
+			return
+		}
+		err := dtm.dtcontext.DeleteTwin(edgeID, twinID)
+		if err != nil {
+			klog.Warningf("register failed")
+			return
+		}
 
-	//if send success, the cache the message.
-	
+		//build the send message.
+		twin := &common.DigitalTwin{
+			ID: twinID,
+		}
+		twins := []common.DigitalTwin{*twin}
+	 	msgContent, err := common.BuildTwinMessage(twins)
+		if err != nil {
+			return 
+		}
+
+		dtm.dtcontext.SendTwinMessage(edgeID, common.DGTWINS_OPS_DELETE, msgContent)
+		//cache the message.
+		dtm.dtcontext.CacheMessage(msg)			
+	case common.DGTWINS_OPS_GET:
+		/*
+		* Get the current twin.
+		*/
+		twinIDs, isthisType := msg.GetContent().([]string)
+		if !isthisType {
+			klog.Warningf("Error format")
+			return
+		}
+
+		twins := make([]common.DigitalTwin, 0)
+		for _, twinID := range twinIDs {
+			content, err := dtm.dtcontext.GetRawTwin(edgeID, twinID)
+			if err != nil {
+				klog.Warningf("Get failed")
+				continue
+			} 
+
+			var dgTwin common.DigitalTwin
+			err = json.Unmarshal(content, &dgTwin)
+			if err != nil {
+				return 
+			}
+			twins = append(twins, dgTwin)
+		}
+
+		// Send the response.
+		msgContent, err := common.BuildResponseMessage(common.RequestSuccessCode, "Update successful", twins)
+		if err != nil {
+			return 
+		}
+		dtm.dtcontext.SendResponseMessage(msg, msgContent)
+	default:
+		klog.Warningf("Ignored message:", msg)
+	}
 }

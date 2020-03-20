@@ -1,10 +1,10 @@
 package devicetwin
 
 import (
-	"time"
+	_"time"
 	"sync"
 	"errors"
-	"strings"
+	_"strings"
 	"k8s.io/klog"
 	"github.com/jwzl/edgeOn/common"
 	"github.com/jwzl/wssocket/model"
@@ -98,7 +98,7 @@ func (dtc *DTContext) GetEdgeInfo(edgeID string) (*EdgeDescription, error){
 * AddEdgeInfo: Add edge information.
 */
 func (dtc *DTContext) AddEdgeInfo(edged *EdgeDescription) error {
-	edgeID : = edged.ID
+	edgeID := edged.ID
 	if err := dtc.GetEdgeInfo(edgeID); err == nil {
 		return errors.New("edge is exists.")
 	}
@@ -205,8 +205,9 @@ func (dtc *DTContext) GetRawTwin(edgeID, twinID string) ([]byte, error) {
 //SendResponseMessage Send Response conten.
 func (dtc *DTContext) SendResponseMessage(requestMsg *model.Message, content []byte){
 	resource := requestMsg.GetResource()
+	target := requestMsg.GetSource()	
 
-	modelMsg := dtc.BuildModelMessage(common.CloudName, common.TwinModuleName, 
+	modelMsg := dtc.BuildModelMessage(common.CloudName, target, 
 					common.DGTWINS_OPS_RESPONSE, resource, content)	
 	modelMsg.SetTag(requestMsg.GetID())	
 	klog.Infof("Send response message (%v)", modelMsg)
@@ -223,6 +224,15 @@ func (dtc *DTContext) SendTwinMessage(edgeID, operation string, content []byte){
 	dtc.SendToModule("EventHub", modelMsg)
 }
 
+func (dtc *DTContext) SendPropertyMessage(edgeID, operation string, content []byte){
+	resource := edgeID+"/"+common.DGTWINS_RESOURCE_PROPERTY
+
+	modelMsg := dtc.BuildModelMessage(common.CloudName, common.TwinModuleName, 
+					operation, resource, content)	
+
+	dtc.SendToModule("EventHub", modelMsg)
+}
+
 func (dtc *DTContext) CacheMessage(msg *model.Message){
 	msgID := msg.GetID()
  
@@ -230,6 +240,13 @@ func (dtc *DTContext) CacheMessage(msg *model.Message){
 	if !exist {
 		dtc.MessageCache.Store(msgID, msg)
 	}
+}
+
+func (dtc *DTContext) CacheHasThisMessage(msg *model.Message) bool {
+	msgID := msg.GetID()
+ 
+	_, exist := dtc.MessageCache.Load(msgID)
+	return exist
 }
 
 func (dtc *DTContext) DeleteMsgCache(msg *model.Message){

@@ -4,7 +4,7 @@
 * 2. Keepalive between cloud and edge sides.
 * 3. Manage the edge on remote.
 */
-package edge
+package devicetwin
 
 
 import (
@@ -35,8 +35,8 @@ type EdgeDescription struct {
 
 
 func NewEdgeDescription(edgeID string) *EdgeDescription {
-	twins		sync.Map
-	twinMutex	sync.Map
+	var twins		sync.Map
+	var twinMutex	sync.Map
 
 	return &EdgeDescription{
 		ID: edgeID,
