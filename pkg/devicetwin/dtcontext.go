@@ -99,7 +99,7 @@ func (dtc *DTContext) GetEdgeInfo(edgeID string) (*EdgeDescription, error){
 */
 func (dtc *DTContext) AddEdgeInfo(edged *EdgeDescription) error {
 	edgeID := edged.ID
-	if err := dtc.GetEdgeInfo(edgeID); err == nil {
+	if _, err := dtc.GetEdgeInfo(edgeID); err == nil {
 		return errors.New("edge is exists.")
 	}
 
@@ -196,7 +196,7 @@ func (dtc *DTContext) GetRawTwin(edgeID, twinID string) ([]byte, error) {
 
 	edged, err := dtc.GetEdgeInfo(edgeID)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	return edged.GetRawTwin(twinID)
@@ -207,30 +207,30 @@ func (dtc *DTContext) SendResponseMessage(requestMsg *model.Message, content []b
 	resource := requestMsg.GetResource()
 	target := requestMsg.GetSource()	
 
-	modelMsg := dtc.BuildModelMessage(common.CloudName, target, 
+	modelMsg := common.BuildModelMessage(common.CloudName, target, 
 					common.DGTWINS_OPS_RESPONSE, resource, content)	
 	modelMsg.SetTag(requestMsg.GetID())	
 	klog.Infof("Send response message (%v)", modelMsg)
 
-	dtc.SendToModule("EventHub", modelMsg)
+	dtc.Context.Send("EventHub", modelMsg)
 }
 
 func (dtc *DTContext) SendTwinMessage(edgeID, operation string, content []byte){
 	resource := edgeID+"/"+common.DGTWINS_RESOURCE_TWINS
 
-	modelMsg := dtc.BuildModelMessage(common.CloudName, common.TwinModuleName, 
+	modelMsg := common.BuildModelMessage(common.CloudName, common.TwinModuleName, 
 					operation, resource, content)	
 
-	dtc.SendToModule("EventHub", modelMsg)
+	dtc.Context.Send("EventHub", modelMsg)
 }
 
-func (dtc *DTContext) SendPropertyMessage(edgeID, operation string, content []byte){
+func (dtc *DTContext) SendPropertyMessage(edgeID, operation string, content interface{}){
 	resource := edgeID+"/"+common.DGTWINS_RESOURCE_PROPERTY
 
-	modelMsg := dtc.BuildModelMessage(common.CloudName, common.TwinModuleName, 
+	modelMsg := common.BuildModelMessage(common.CloudName, common.TwinModuleName, 
 					operation, resource, content)	
 
-	dtc.SendToModule("EventHub", modelMsg)
+	dtc.Context.Send("EventHub", modelMsg)
 }
 
 func (dtc *DTContext) CacheMessage(msg *model.Message){

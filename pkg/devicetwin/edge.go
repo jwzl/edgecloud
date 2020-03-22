@@ -9,6 +9,9 @@ package devicetwin
 
 import (
 	"sync"
+	"errors"
+
+	"encoding/json"
 	"github.com/jwzl/edgeOn/common"
 )
 
@@ -43,7 +46,7 @@ func NewEdgeDescription(edgeID string) *EdgeDescription {
 		State: EdgeStateInitial,
 		deviceIDs: make([]string, 0),
 		Twins: &twins,
-		TwinMutex: twinMutex, 
+		TwinMutex: &twinMutex, 
 	}
 }
 
@@ -84,7 +87,12 @@ func (ed *EdgeDescription) UnRegisterTwins(twinID string) error {
 		return errors.New("twin is not exists.")
 	}
 
-	delete(ed.deviceIDs, twinID)
+	for key, ids := range ed.deviceIDs {
+		if ids == twinID {
+			ed.deviceIDs = append(ed.deviceIDs[:key], ed.deviceIDs[key+1:]...)
+		}
+	}
+	
 	return ed.DeleteTwin(twinID)
 }
 
@@ -163,7 +171,7 @@ func (ed *EdgeDescription) UpdateTwin(twin *common.DigitalTwin) error {
 	
 		oldTwin, ok := ed.getTwin(twinID) 
 		if !ok {
-			return 
+			return errors.New("No such twin")
 		}
 		//update the twin
 		if len(twin.Name) > 0 {
@@ -212,6 +220,8 @@ func (ed *EdgeDescription) UpdateTwin(twin *common.DigitalTwin) error {
 		}	
 
 	} 
+
+	return nil
 }
 
 /*

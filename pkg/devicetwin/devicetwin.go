@@ -2,6 +2,8 @@ package devicetwin
 
 import(
 	"strings"
+	"encoding/json"
+
 	"k8s.io/klog"
 	"github.com/jwzl/edgeOn/common"
 	"github.com/jwzl/wssocket/model"
@@ -91,18 +93,24 @@ func (dtm *DeviceTwinModule) doUpStreamMessage(msg *model.Message) {
 			/*
 			* This is a edge information report.
 			*/
-			edgeInfo, isThisType := msg.GetContent().(common.EdgeInfo)
+			contents, isThisType := msg.GetContent().([]byte)
 			if !isThisType {
 				return 
 			}
-	
+		
+			var edgeInfo common.EdgeInfo
+			err := json.Unmarshal(contents, &edgeInfo)
+			if err != nil {
+				return 
+			}
+
 			//build a edge description struct.
-			edged:= NewEdgeDescription(edgeInfo.edgeID)
+			edged:= NewEdgeDescription(edgeInfo.EdgeID)
 			edged.SetEdgeName(edgeInfo.EdgeName)
 			edged.SetEdgeDescription(edgeInfo.Description)
 			edged.SetEdgeState(EdgeStateOnline) 
 
-			err := dtm.dtcontext.AddEdgeInfo(edged)
+			err = dtm.dtcontext.AddEdgeInfo(edged)
 			if err != nil {
 				klog.Infof("Add edge info failed")
 			}
@@ -155,7 +163,7 @@ func (dtm *DeviceTwinModule) doUpStreamMessage(msg *model.Message) {
 * doDownStreamMessage
 */
 func (dtm *DeviceTwinModule) doDownStreamMessage(msg *model.Message) {
-	var err error
+	//var err error
 
 	operation := msg.GetOperation()
 	resource := msg.GetResource()
@@ -166,7 +174,7 @@ func (dtm *DeviceTwinModule) doDownStreamMessage(msg *model.Message) {
 	case DGTWINS_EDGE_BIND:
 		msg.Router.Target = "edge"
 		//send to event hub.
-		dtm.dtcontext.SendToModule("EventHub", msg)
+		dtm.context.Send("EventHub", msg)
 		//cache the message.
 		dtm.dtcontext.CacheMessage(msg)	
 	case common.DGTWINS_OPS_CREATE:
