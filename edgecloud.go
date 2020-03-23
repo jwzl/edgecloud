@@ -2,7 +2,7 @@ package main
 
 
 import (
-	"k8s.io/klog"
+	"os"
 	"k8s.io/component-base/logs"
 	"github.com/jwzl/edgecloud/cmd"
 )

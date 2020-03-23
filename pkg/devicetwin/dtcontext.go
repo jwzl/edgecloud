@@ -1,10 +1,10 @@
 package devicetwin
 
 import (
-	_"time"
+	"time"
 	"sync"
 	"errors"
-	_"strings"
+	"strings"
 	"k8s.io/klog"
 	"github.com/jwzl/edgeOn/common"
 	"github.com/jwzl/wssocket/model"
@@ -20,6 +20,7 @@ type DTContext struct {
 	EdgeMap			*sync.Map
 	EdgeMutex		*sync.Map
 	MessageCache	*sync.Map
+	EdgeHealth		*sync.Map
 }
 
 func NewDTContext(c *context.Context) *DTContext {
@@ -122,7 +123,9 @@ func (dtc *DTContext) SetEdgeState(edgeID, state string) error {
 		return err
 	}
 	
-	edged.SetEdgeState(state)
+	if edged.GetEdgeState() != state {
+		edged.SetEdgeState(state)
+	}
 
 	return nil
 }
@@ -258,4 +261,13 @@ func (dtc *DTContext) DeleteMsgCache(msg *model.Message){
 			dtc.MessageCache.Delete(pMsgID) 
 		}
 	}
+}
+
+//dealHeartBeat deal heartbeat message from edge.
+func (dtc *DTContext) DealHeartBeat(msg *model.Message) {
+	resource  := msg.GetResource()
+	splitString := strings.Split(resource, "/")	
+	edgeID := splitString[0]
+
+	dtc.EdgeHealth.Store(edgeID, time.Now().Unix())
 }

@@ -63,6 +63,10 @@ func (ed *EdgeDescription) SetEdgeState(state string) {
 	ed.State = state
 }
 
+func (ed *EdgeDescription) GetEdgeState() string {
+	return ed.State
+}
+
 func (ed *EdgeDescription) FindTwins(twinID string) bool {
 	for _, ids := range ed.deviceIDs {
 		if ids == twinID {

@@ -1,6 +1,7 @@
 package devicetwin
 
 import(
+	"time"	
 	"strings"
 	"encoding/json"
 
@@ -13,6 +14,8 @@ import(
 
 const (
 	DGTWINS_EDGE_BIND	= "Bind"
+
+	MODEL_MSG_TIMEOUT = 5*60		//5s 
 )
 
 type DeviceTwinModule struct {
@@ -43,6 +46,8 @@ func (dtm *DeviceTwinModule) Start(c *context.Context) {
 	dtm.context = c
 	dtm.dtcontext = NewDTContext(c)	
 
+	go dtm.MessageCheck()
+
 	for {
 		v, err := dtm.context.Receive(dtm.Name())
 		if err != nil {
@@ -60,7 +65,7 @@ func (dtm *DeviceTwinModule) Start(c *context.Context) {
 		
 		if strings.Contains(operation, common.DGTWINS_OPS_KEEPALIVE){
 			// recieve the heartbeat.
-			
+			dtm.dtcontext.DealHeartBeat(msg)
 		}else if strings.Contains(target, common.CloudName) {
 			// Do Up stream message.
 			go dtm.doUpStreamMessage(msg)
@@ -286,4 +291,60 @@ func (dtm *DeviceTwinModule) doDownStreamMessage(msg *model.Message) {
 	default:
 		klog.Warningf("Ignored message:", msg)
 	}
+}
+
+func (dtm *DeviceTwinModule) MessageCheck(){
+	checkTimeoutCh := time.After(10*time.Second)
+	checkHealthCh  := time.After(60*time.Second)
+	for {
+		select {
+		case <-checkHealthCh:
+			//health check.
+			dtm.dtcontext.EdgeHealth.Range(func (key interface{}, value interface{}) bool {
+				edgeID := key.(string)
+				timeStamp := value.(int64)
+				now := time.Now().Unix()
+				if now - timeStamp > 80 {
+					klog.Infof("edge %s is not healthy, we mark the edge as offline", edgeID)
+					dtm.dtcontext.SetEdgeState(edgeID, EdgeStateOffline)
+				}else{
+					dtm.dtcontext.SetEdgeState(edgeID, EdgeStateOnline)
+				}
+
+				return true
+			})
+
+			checkHealthCh = time.After(60*time.Second)
+		case <-checkTimeoutCh:
+			//check  the MessageCache for response.
+			dtm.dealMessageTimeout()	
+			checkTimeoutCh = time.After(10*time.Second)
+		}
+	}		
+}
+
+func (dtm *DeviceTwinModule) dealMessageTimeout() {
+	dtm.dtcontext.MessageCache.Range(func (key interface{}, value interface{}) bool {
+		msg, isMsgType := value.(*model.Message)
+		if !isMsgType {
+			return false
+		}
+
+		timeStamp := msg.GetTimestamp()/1e3
+		now	:= time.Now().UnixNano() / 1e9
+		if now - timeStamp >= MODEL_MSG_TIMEOUT {
+			/*
+			* Timeout, delete the message. 
+			*/
+			dtm.dtcontext.MessageCache.Delete(key)
+			return true
+		}else{
+			//resend  the message.
+			klog.Infof("resend the message:", msg)	
+			dtm.context.Send("EventHub", msg)
+			return true
+		} 
+
+		return false
+	})
 }
