@@ -9,6 +9,7 @@ import(
 	"github.com/jwzl/edgeOn/common"
 	"github.com/jwzl/wssocket/model"
 	"github.com/jwzl/beehive/pkg/core"
+	"github.com/jwzl/edgecloud/pkg/types"
 	"github.com/jwzl/beehive/pkg/core/context"
 )
 
@@ -173,7 +174,13 @@ func (dtm *DeviceTwinModule) doDownStreamMessage(msg *model.Message) {
 	operation := msg.GetOperation()
 	resource := msg.GetResource()
 	splitString := strings.Split(resource, "/")
-	edgeID := splitString[0]	
+	edgeID := splitString[0]
+	msgContent, isThisType := msg.GetContent().(types.MsgContent)
+	if !isThisType {
+		//ignore.
+		return 
+	}
+	replyChn := msgContent.ReplyChn	
 
 	switch operation {
 	case DGTWINS_EDGE_BIND:
@@ -182,6 +189,10 @@ func (dtm *DeviceTwinModule) doDownStreamMessage(msg *model.Message) {
 		dtm.context.Send("EventHub", msg)
 		//cache the message.
 		dtm.dtcontext.CacheMessage(msg)	
+		
+		//reply the message.
+		resp := types.BuildMessageResponse(common.RequestSuccessCode, "successful", nil)
+		replyChn <- *resp
 	case common.DGTWINS_OPS_CREATE:
 		twinID, isthisType := msg.GetContent().(string)
 		if !isthisType {
@@ -195,7 +206,9 @@ func (dtm *DeviceTwinModule) doDownStreamMessage(msg *model.Message) {
 		}
 		
 		// response the successful message.
-		//TODO:
+		//reply the message.
+		resp := types.BuildMessageResponse(common.RequestSuccessCode, "Update successful", nil)
+		replyChn <- *resp
 
 		// Send create twin message.
 		twin := &common.DigitalTwin{
@@ -228,6 +241,9 @@ func (dtm *DeviceTwinModule) doDownStreamMessage(msg *model.Message) {
 		dtm.dtcontext.SendPropertyMessage(edgeID, common.DGTWINS_OPS_UPDATE, msg.GetContent())
 		//cache the message.
 		dtm.dtcontext.CacheMessage(msg)	
+		//reply the message.
+		resp := types.BuildMessageResponse(common.RequestSuccessCode, "Update successful", nil)
+		replyChn <- *resp
 	case common.DGTWINS_OPS_DELETE:
 		/*
 		* delete the twin by id.
@@ -255,7 +271,10 @@ func (dtm *DeviceTwinModule) doDownStreamMessage(msg *model.Message) {
 
 		dtm.dtcontext.SendTwinMessage(edgeID, common.DGTWINS_OPS_DELETE, msgContent)
 		//cache the message.
-		dtm.dtcontext.CacheMessage(msg)			
+		dtm.dtcontext.CacheMessage(msg)	
+		//reply the message.
+		resp := types.BuildMessageResponse(common.RequestSuccessCode, "Update successful", nil)
+		replyChn <- *resp			
 	case common.DGTWINS_OPS_GET:
 		/*
 		* Get the current twin.
@@ -282,14 +301,13 @@ func (dtm *DeviceTwinModule) doDownStreamMessage(msg *model.Message) {
 			twins = append(twins, dgTwin)
 		}
 
-		// Send the response.
-		msgContent, err := common.BuildResponseMessage(common.RequestSuccessCode, "Update successful", twins)
-		if err != nil {
-			return 
-		}
-		dtm.dtcontext.SendResponseMessage(msg, msgContent)
+		//reply the message.
+		resp := types.BuildMessageResponse(common.RequestSuccessCode, "Get", twins)
+		replyChn <- *resp
 	default:
 		klog.Warningf("Ignored message:", msg)
+		resp := types.BuildMessageResponse(common.BadRequestCode, "Ignored", nil)
+		replyChn <- *resp
 	}
 }
 
