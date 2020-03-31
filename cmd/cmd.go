@@ -4,6 +4,7 @@ import(
 	"k8s.io/klog"
 	"github.com/spf13/cobra"
 	"github.com/jwzl/beehive/pkg/core"
+	"github.com/jwzl/edgecloud/pkg/web"
 	"github.com/jwzl/edgecloud/pkg/eventhub"
 	"github.com/jwzl/edgecloud/pkg/devicetwin"
 )
@@ -31,6 +32,7 @@ func NewAppCommand() *cobra.Command {
 
 // register all module into beehive.
 func registerModules(){
+	web.Register()		//http server.
 	devicetwin.Register()	
 	eventhub.Register()	
 }

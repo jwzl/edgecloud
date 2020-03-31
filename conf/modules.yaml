@@ -1,0 +1,2 @@
+modules:
+    enabled: [apiserver, eventHub, deviceTwin]
