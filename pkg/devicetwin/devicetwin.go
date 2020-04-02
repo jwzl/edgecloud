@@ -55,7 +55,7 @@ func (dtm *DeviceTwinModule) Start(c *context.Context) {
 			klog.Errorf("failed to receive message: %v", err)
 			break
 		}
-
+		klog.Infof("messagae ##", v)
 		msg, isThisType := v.(*model.Message)
 		if !isThisType || msg == nil { 		
 			continue
@@ -65,6 +65,14 @@ func (dtm *DeviceTwinModule) Start(c *context.Context) {
 		operation := msg.GetOperation()
 		
 		if strings.Contains(operation, common.DGTWINS_OPS_KEEPALIVE){
+			resource  := msg.GetResource()
+			splitString := strings.Split(resource, "/")	
+			edgeID := splitString[0]
+
+			if !dtm.dtcontext.EdgeIsOnline(edgeID) { 
+				dtm.dtcontext.SetEdgeState(edgeID, EdgeStateOnline)
+				klog.Infof("edge %s is online", edgeID)
+			}
 			// recieve the heartbeat.
 			dtm.dtcontext.DealHeartBeat(msg)
 		}else if strings.Contains(target, common.CloudName) {
@@ -95,6 +103,7 @@ func (dtm *DeviceTwinModule) doUpStreamMessage(msg *model.Message) {
 
 	switch operation {
 	case common.DGTWINS_OPS_RESPONSE:
+		dtm.dtcontext.DeleteMsgCache(msg)
 		if strings.Contains(splitString[1], common.DGTWINS_RESOURCE_EDGE) {
 			/*
 			* This is a edge information report.
@@ -110,16 +119,19 @@ func (dtm *DeviceTwinModule) doUpStreamMessage(msg *model.Message) {
 				return 
 			}
 
+			klog.Infof("edge Info reported", edgeInfo)
 			//build a edge description struct.
-			edged:= NewEdgeDescription(edgeInfo.EdgeID)
+			edged:= NewEdgeDescription(edgeID)
 			edged.SetEdgeName(edgeInfo.EdgeName)
 			edged.SetEdgeDescription(edgeInfo.Description)
 			edged.SetEdgeState(EdgeStateOnline) 
 
 			err = dtm.dtcontext.AddEdgeInfo(edged)
 			if err != nil {
-				klog.Infof("Add edge info failed")
+				klog.Infof("Add edge info failed", edgeInfo.EdgeID)
 			}
+	
+			klog.Infof("edge %s is online",edgeInfo.EdgeID)
 		}else{
 			//If no cache such message, then, Ignore this message. 
 			if dtm.dtcontext.CacheHasThisMessage(msg) != true {
@@ -170,7 +182,7 @@ func (dtm *DeviceTwinModule) doUpStreamMessage(msg *model.Message) {
 */
 func (dtm *DeviceTwinModule) doDownStreamMessage(msg *model.Message) {
 	//var err error
-
+	klog.Infof("Down stream message %v", msg)
 	operation := msg.GetOperation()
 	resource := msg.GetResource()
 	splitString := strings.Split(resource, "/")
@@ -181,18 +193,25 @@ func (dtm *DeviceTwinModule) doDownStreamMessage(msg *model.Message) {
 		return 
 	}
 	replyChn := msgContent.ReplyChn	
+	msg.Content = msgContent.Content
 
 	switch operation {
 	case DGTWINS_EDGE_BIND:
-		msg.Router.Target = "edge"
-		//send to event hub.
-		dtm.context.Send("EventHub", msg)
-		//cache the message.
-		dtm.dtcontext.CacheMessage(msg)	
+		if !dtm.dtcontext.EdgeIsOnline(edgeID) { 
+			klog.Infof("Bind the message")
+			msg.Router.Target = "edge"
+			//send to event hub.
+			dtm.context.Send(types.EDGECLOUD_EVENTHUB_MODULE, *msg)
+			//cache the message.
+			dtm.dtcontext.CacheMessage(msg)	
 		
-		//reply the message.
-		resp := types.BuildMessageResponse(common.RequestSuccessCode, "successful", nil)
-		replyChn <- *resp
+			//reply the message.
+			resp := types.BuildMessageResponse(common.RequestSuccessCode, "successful", nil)
+			replyChn <- *resp
+		} else {
+			resp := types.BuildMessageResponse(201, "edge has already bind", nil)
+			replyChn <- *resp
+		}
 	case common.DGTWINS_OPS_CREATE:
 		twinID, isthisType := msg.GetContent().(string)
 		if !isthisType {
@@ -359,7 +378,7 @@ func (dtm *DeviceTwinModule) dealMessageTimeout() {
 		}else{
 			//resend  the message.
 			klog.Infof("resend the message:", msg)	
-			dtm.context.Send("EventHub", msg)
+			dtm.context.Send(types.EDGECLOUD_EVENTHUB_MODULE, *msg)
 			return true
 		} 
 

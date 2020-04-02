@@ -10,6 +10,7 @@ import(
 	"github.com/jwzl/edgeOn/common"
 	"github.com/jwzl/wssocket/model"
 	"github.com/jwzl/beehive/pkg/core"
+	"github.com/jwzl/edgecloud/pkg/types"
 	"github.com/jwzl/beehive/pkg/core/context"
 	"github.com/jwzl/edgecloud/pkg/eventhub/settings"
 	"github.com/jwzl/edgecloud/pkg/eventhub/transfer"
@@ -19,8 +20,8 @@ const (
 	//mqtt topic should has the format:
 	// mqtt/dgtwin/cloud[edge]/{edgeID}/comm for communication.
 	// mqtt/dgtwin/cloud[edge]/{edgeID}/control  for some control message.
-	MQTT_SUBTOPIC_PREFIX	= "mqtt/dgtwin/cloud"
-	MQTT_PUBTOPIC_PREFIX	= "mqtt/dgtwin/edge"
+	MQTT_PUBTOPIC_PREFIX	= "mqtt/dgtwin/cloud"
+	MQTT_SUBTOPIC_PREFIX	= "mqtt/dgtwin/edge"
 )
 type EventHub struct {
 	trans	transfer.Transfer
@@ -32,7 +33,6 @@ func Register(){
 	setting, err := settings.GetMqttSetting()
 	if err != nil {
 		klog.Errorf("Get mqtt setting failed")
-		return
 	}
 
 	eh := &EventHub{
@@ -43,12 +43,12 @@ func Register(){
 
 //Name
 func (eh *EventHub) Name() string {
-	return "EventHub"
+	return types.EDGECLOUD_EVENTHUB_MODULE
 }
 
 //Group
 func (eh *EventHub) Group() string {
-	return "EventHub"
+	return types.EDGECLOUD_EVENTHUB_MODULE
 }
 
 //Start this module.
@@ -69,12 +69,13 @@ func (eh *EventHub) Start(c *context.Context) {
 			break
 		}
 
-		msg, isThisType := v.(*model.Message)
-		if !isThisType || msg == nil { 		
+		msg, isThisType := v.(model.Message)
+		if !isThisType { 		
 			continue
 		}
 
 		resource := msg.GetResource()
+		klog.Infof("Recive ### ", msg)
 		splitString := strings.Split(resource, "/")
 		edgeID := splitString[0]
 		resource = splitString[1]
@@ -95,7 +96,8 @@ func (eh *EventHub) Start(c *context.Context) {
 			topic = fmt.Sprintf("%s/%s/comm", MQTT_PUBTOPIC_PREFIX, edgeID)	
 		}
 
-		err = eh.trans.Publish(topic, msg)
+		klog.Infof("mqtt pub %s", topic, msg)
+		err = eh.trans.Publish(topic, &msg)
 		if err != nil {
 			klog.Errorf("failed to publish message: %v", err)
 			return

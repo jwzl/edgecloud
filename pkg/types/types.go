@@ -6,7 +6,7 @@ import(
 
 const (
 	EDGECLOUD_APISERVER_MODULE	= "apiserver"
-	EDGECLOUD_EVENTHUB_MODULE	= "eventHub"
+	EDGECLOUD_EVENTHUB_MODULE	= "eventhub"
 	EDGECLOUD_DEVICETWIN_MODULE = "deviceTwin"
 )
 

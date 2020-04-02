@@ -31,12 +31,14 @@ func NewDTContext(c *context.Context) *DTContext {
 	var edges sync.Map
 	var edgesMutex sync.Map
 	var cache sync.Map
+	var healthEdge sync.Map
 
 	return &DTContext{
 		Context:	c,
 		EdgeMap:	&edges,
 		EdgeMutex:  &edgesMutex,
 		MessageCache: &cache,
+		EdgeHealth: &healthEdge,
 	}
 }
 
@@ -111,6 +113,21 @@ func (dtc *DTContext) AddEdgeInfo(edged *EdgeDescription) error {
 	return nil
 }
 
+/*
+* Edge is online?
+*/
+func (dtc *DTContext) EdgeIsOnline(edgeID string) bool {
+	edged, err := dtc.GetEdgeInfo(edgeID)
+	if err != nil {
+		return false
+	}
+	
+	if edged.GetEdgeState() != EdgeStateOnline {
+		return false
+	}
+
+	return true
+}
 /*
 * Set edge State
 */

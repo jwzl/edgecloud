@@ -26,7 +26,12 @@ func (dtm *DeviceTwinModule) SendMessage(edgeID, target, operation, resource str
 		Content: content,
 	}
 	modelMsg := common.BuildModelMessage(common.CloudName, target, 
-					operation, resource, msgContent)	
+					operation, resource, msgContent)
+	/*
+	* rewrite the content since the return result is byte array.
+	* we just pass the pointer.
+	*/
+	modelMsg.Content = msgContent	
 
 	dtm.context.Send(types.EDGECLOUD_DEVICETWIN_MODULE, modelMsg)
 
@@ -36,36 +41,30 @@ func (dtm *DeviceTwinModule) SendMessage(edgeID, target, operation, resource str
 
 // verb: bind
 //path: edge/bind?edgeid=xxx 
-func BindEdge(edgeID string) error {
+func BindEdge(edgeID string) (int, string) {
 	
-	replyChn := devTM.SendMessage(edgeID, "edge", "Bind", common.DGTWINS_RESOURCE_EDGE, nil) 
+	replyChn := devTM.SendMessage(edgeID, common.TwinModuleName, "Bind", common.DGTWINS_RESOURCE_EDGE, nil) 
 	resp , ok := <- replyChn
+	defer close(replyChn)
 	if !ok {
-		return errors.New("Channel has closed")
+		return common.InternalErrorCode, "Channel has closed"
 	}
 
-	if resp.Code != common.RequestSuccessCode {
-		return errors.New(resp.Reason)
-	}
-
-	return nil	
+	return resp.Code, resp.Reason
 }
 
 //path: /edge/twin?edgeid=xxx&twinid=xxx
-func CreateTwin(edgeID, twinID string) error{
+func CreateTwin(edgeID, twinID string) (int, string){
 	replyChn := devTM.SendMessage(edgeID, common.TwinModuleName,
 			 common.DGTWINS_OPS_CREATE, common.DGTWINS_RESOURCE_TWINS, twinID)
 
 	resp , ok := <- replyChn
+	defer close(replyChn)
 	if !ok {
-		return errors.New("Channel has closed")
+		return common.InternalErrorCode, "Channel has closed"
 	}
 
-	if resp.Code != common.RequestSuccessCode {
-		return errors.New(resp.Reason)
-	}
-
-	return nil	 
+	return resp.Code, resp.Reason	 
 }
 
 //path: /edge/twin?edgeid=xxx&twinid=xxx
@@ -73,6 +72,7 @@ func DeleteTwin(edgeID, twinID string) error{
 	replyChn := devTM.SendMessage(edgeID, common.TwinModuleName,
 			 common.DGTWINS_OPS_DELETE, common.DGTWINS_RESOURCE_TWINS, twinID)
 	resp , ok := <- replyChn
+	
 	if !ok {
 		return errors.New("Channel has closed")
 	}

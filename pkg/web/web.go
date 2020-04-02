@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"k8s.io/klog"
 	"github.com/gin-gonic/gin"
+	"github.com/gin-contrib/cors"
 	"github.com/jwzl/beehive/pkg/core"
 	"github.com/jwzl/edgecloud/pkg/types"
 	"github.com/jwzl/edgecloud/pkg/web/apis"
@@ -22,7 +23,7 @@ type WebModule struct {
 */
 func InitRouter() *gin.Engine {
 	Router := gin.Default()
-	ApiGroup := Router.Group("")
+	ApiGroup := Router.Group("rest/v1")
 	router.InitApiRouter(ApiGroup)
 	router.InitDeviceRouter(ApiGroup)
 	router.InitEdgeRouter(ApiGroup)
@@ -32,19 +33,17 @@ func InitRouter() *gin.Engine {
 
 func Cors() gin.HandlerFunc {
    return func(c *gin.Context) {
-      method := c.Request.Method
+      	c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
+        c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
+        c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, accept, origin, Cache-Control, X-Requested-With")
+        c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS, GET, PUT")
+		klog.Infof("XXXXXXXXX",)
+        if c.Request.Method == "OPTIONS" {
+            c.AbortWithStatus(200)
+            return
+        }
 
-      c.Header("Access-Control-Allow-Origin", "http://localhost:8080")
-      c.Header("Access-Control-Allow-Headers", "Content-Type,AccessToken,X-CSRF-Token, Authorization, Token")
-      c.Header("Access-Control-Allow-Methods", "POST, GET, OPTIONS")
-      c.Header("Access-Control-Expose-Headers", "Content-Length, Access-Control-Allow-Origin, Access-Control-Allow-Headers, Content-Type")
-      c.Header("Access-Control-Allow-Credentials", "true")
-
-      //allow OPTIONS method
-      if method == "OPTIONS" {
-         c.AbortWithStatus(http.StatusNoContent)
-      }
-      c.Next()
+        c.Next()
    }
 }
 
@@ -70,7 +69,14 @@ func (wm *WebModule) Start(c *context.Context) {
 	apis.NewDeviceTwinModule(c)
 	//init router
 	router := InitRouter()  
-	router.Use(Cors())
+	router.Use(cors.New(cors.Config{
+		AllowOrigins:     []string{"*"},
+		AllowMethods:     []string{"PUT", "PATCH", "OPTIONS", "POST", "GET"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "X-Requested-With"},
+		ExposeHeaders:    []string{"Content-Length"},
+		AllowCredentials: true,
+		MaxAge: 12 * time.Hour,
+	}))
 	port := config.GetServerConfig().Port
 
 	s := &http.Server{

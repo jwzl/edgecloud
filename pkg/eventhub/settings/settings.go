@@ -1,7 +1,9 @@
 package settings
 
 import (
+	"fmt"
 	"time"
+	"strconv"	
 	"crypto/tls"
 	"k8s.io/klog"
 	"github.com/jwzl/beehive/pkg/common/config"
@@ -31,12 +33,12 @@ func GetMqttSetting()(*MqttSettings, error){
 	}
 	setting.URL = url
 
-	id, err := config.CONFIG.GetValue("eventhub.mqtt.clientid").ToString()
-	if err != nil {
-		klog.Warningf("Failed to get client id: %v", err)
-		return nil, err
+	timeStr := strconv.FormatInt(time.Now().UnixNano()/1e6, 10)
+	right := len(timeStr)
+	if right > 10 {
+		right = 10
 	}
-	setting.ClientID = id
+	setting.ClientID = fmt.Sprintf("cloudmqtt-client-%s", timeStr[0:right])
 
 	user, err := config.CONFIG.GetValue("eventhub.mqtt.user").ToString()
 	if err != nil {
