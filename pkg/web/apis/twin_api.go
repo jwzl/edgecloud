@@ -6,8 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-//POST /edge/bind?edgeid=xxx
-func BindEdgeApi(c *gin.Context) {
+func AddCors(c *gin.Context){
 	/*
 	* Gin post request can't call gin.Use() api correctlly.
 	* We add this tag into header
@@ -15,6 +14,11 @@ func BindEdgeApi(c *gin.Context) {
 	header := c.Writer.Header()
 	header.Set("Access-Control-Allow-Origin", "*")
 	header.Set("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, accept, origin, Cache-Control, X-Requested-With")
+}
+
+//POST /edge/bind?edgeid=xxx
+func BindEdgeApi(c *gin.Context) {
+	AddCors(c)
 	edgeId := c.Query("edgeid")
 	if edgeId == "" {
 		c.JSON(http.StatusBadRequest,  "edgeid is empty")
@@ -26,6 +30,7 @@ func BindEdgeApi(c *gin.Context) {
 
 //POST /create?edgeID=001&twinID=001
 func CreateTwinApi(c *gin.Context)  {
+	AddCors(c)
 	edgeId := c.Query("edgeid")
 	twinId := c.Query("twinid")
 	if edgeId == "" || twinId == "" {
@@ -38,6 +43,7 @@ func CreateTwinApi(c *gin.Context)  {
 
 //DELETE /delete?edgeID=001&twinID=001
 func DeleteTwinApi(c *gin.Context) {
+	AddCors(c)
 	edgeId := c.Query("edgeid")
 	twinId := c.Query("twinid")
 	if edgeId == "" || twinId == "" {

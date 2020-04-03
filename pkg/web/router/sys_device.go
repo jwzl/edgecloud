@@ -9,7 +9,7 @@ func InitDeviceRouter(Router *gin.RouterGroup) {
 	DeviceRouter := Router.Group("dev")
 	{
 		DeviceRouter.GET("/get", apis.GetTwinApi)
-		DeviceRouter.POST("/twin", apis.CreateTwinApi)
+		DeviceRouter.PUT("/twin", apis.CreateTwinApi)
 		DeviceRouter.DELETE("/delete", apis.DeleteTwinApi)
 	}
 }

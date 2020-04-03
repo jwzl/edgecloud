@@ -8,6 +8,7 @@ import (
 	"k8s.io/klog"
 	"github.com/jwzl/edgeOn/common"
 	"github.com/jwzl/wssocket/model"
+	"github.com/jwzl/edgecloud/pkg/types"
 	"github.com/jwzl/beehive/pkg/core/context"
 )
 
@@ -232,7 +233,7 @@ func (dtc *DTContext) SendResponseMessage(requestMsg *model.Message, content []b
 	modelMsg.SetTag(requestMsg.GetID())	
 	klog.Infof("Send response message (%v)", modelMsg)
 
-	dtc.Context.Send("EventHub", modelMsg)
+	dtc.Context.Send(types.EDGECLOUD_EVENTHUB_MODULE, *modelMsg)
 }
 
 func (dtc *DTContext) SendTwinMessage(edgeID, operation string, content []byte){
@@ -241,7 +242,9 @@ func (dtc *DTContext) SendTwinMessage(edgeID, operation string, content []byte){
 	modelMsg := common.BuildModelMessage(common.CloudName, common.TwinModuleName, 
 					operation, resource, content)	
 
-	dtc.Context.Send("EventHub", modelMsg)
+	dtc.Context.Send(types.EDGECLOUD_EVENTHUB_MODULE, *modelMsg)
+	//cache the message.
+	dtc.CacheMessage(modelMsg)
 }
 
 func (dtc *DTContext) SendPropertyMessage(edgeID, operation string, content interface{}){
@@ -250,7 +253,9 @@ func (dtc *DTContext) SendPropertyMessage(edgeID, operation string, content inte
 	modelMsg := common.BuildModelMessage(common.CloudName, common.TwinModuleName, 
 					operation, resource, content)	
 
-	dtc.Context.Send("EventHub", modelMsg)
+	dtc.Context.Send(types.EDGECLOUD_EVENTHUB_MODULE, *modelMsg)
+	//cache the message.
+	dtc.CacheMessage(modelMsg)
 }
 
 func (dtc *DTContext) CacheMessage(msg *model.Message){

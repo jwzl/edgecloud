@@ -163,6 +163,7 @@ func (dtm *DeviceTwinModule) doUpStreamMessage(msg *model.Message) {
 		}
 		twins := []common.DigitalTwin{*twin}
 
+		klog.Infof("device is online or update")
 		err = dtm.dtcontext.UpdateTwin(edgeID, dgTwin)
 		if err != nil {
 			return
@@ -216,17 +217,21 @@ func (dtm *DeviceTwinModule) doDownStreamMessage(msg *model.Message) {
 		twinID, isthisType := msg.GetContent().(string)
 		if !isthisType {
 			klog.Warningf("Error format")
+			resp := types.BuildMessageResponse(400, "error format", nil)
+			replyChn <- *resp
 			return
 		}
 		err := dtm.dtcontext.RegisterTwins(edgeID, twinID)
 		if err != nil {
-			klog.Warningf("register failed")
+			klog.Warningf("no such edge info/already register")
+			resp := types.BuildMessageResponse(201, "already register", nil)
+			replyChn <- *resp
 			return
 		}
 		
 		// response the successful message.
 		//reply the message.
-		resp := types.BuildMessageResponse(common.RequestSuccessCode, "Update successful", nil)
+		resp := types.BuildMessageResponse(common.RequestSuccessCode, "Create twin successful", nil)
 		replyChn <- *resp
 
 		// Send create twin message.
@@ -235,13 +240,10 @@ func (dtm *DeviceTwinModule) doDownStreamMessage(msg *model.Message) {
 		}
 		twins := []common.DigitalTwin{*twin}
 	 	msgContent, err := common.BuildTwinMessage(twins)
-		if err != nil {
-			return 
+		if err == nil {
+			dtm.dtcontext.SendTwinMessage(edgeID, common.DGTWINS_OPS_CREATE, msgContent)
 		}
 
-		dtm.dtcontext.SendTwinMessage(edgeID, common.DGTWINS_OPS_CREATE, msgContent)
-		//cache the message.
-		dtm.dtcontext.CacheMessage(msg)	 
 	case common.DGTWINS_OPS_UPDATE:	
 		/*
 		* update the twin desired property.
@@ -332,7 +334,7 @@ func (dtm *DeviceTwinModule) doDownStreamMessage(msg *model.Message) {
 
 func (dtm *DeviceTwinModule) MessageCheck(){
 	checkTimeoutCh := time.After(10*time.Second)
-	checkHealthCh  := time.After(60*time.Second)
+	checkHealthCh  := time.After(120*time.Second)
 	for {
 		select {
 		case <-checkHealthCh:
@@ -341,7 +343,7 @@ func (dtm *DeviceTwinModule) MessageCheck(){
 				edgeID := key.(string)
 				timeStamp := value.(int64)
 				now := time.Now().Unix()
-				if now - timeStamp > 80 {
+				if now - timeStamp > 120 {
 					klog.Infof("edge %s is not healthy, we mark the edge as offline", edgeID)
 					dtm.dtcontext.SetEdgeState(edgeID, EdgeStateOffline)
 				}else{
@@ -351,7 +353,7 @@ func (dtm *DeviceTwinModule) MessageCheck(){
 				return true
 			})
 
-			checkHealthCh = time.After(60*time.Second)
+			checkHealthCh = time.After(120*time.Second)
 		case <-checkTimeoutCh:
 			//check  the MessageCache for response.
 			dtm.dealMessageTimeout()	
