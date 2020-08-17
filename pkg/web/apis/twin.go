@@ -117,7 +117,7 @@ func UpdateProperty(edgeID, twinID string, desired map[string]*common.TwinProper
 //path: /edge/twin?edgeid=xxx&twinid=xxx
 func GetTwin(edgeID, twinID string) (*common.DigitalTwin, error){
 	replyChn := devTM.SendMessage(edgeID, common.TwinModuleName,
-			 common.DGTWINS_OPS_GET, common.DGTWINS_RESOURCE_TWINS, twinID)
+			 common.DGTWINS_OPS_GET, common.DGTWINS_RESOURCE_TWINS, []string{twinID})
 
 	resp , ok := <- replyChn
 	if !ok {

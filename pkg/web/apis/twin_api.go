@@ -61,6 +61,7 @@ func DeleteTwinApi(c *gin.Context) {
 
 //Get /get?edgeID=001&twinID=001
 func GetTwinApi(c *gin.Context) {
+	AddCors(c)
 	edgeId := c.Query("edgeid")
 	twinId := c.Query("twinid")
 	if edgeId == "" || twinId == "" {
