@@ -7,7 +7,15 @@ import(
 )
 
 const (
-	EVENT_	= 1	
+	EVENT_EDGE_CREATED	= "0"
+	EVENT_EDGE_ONLINE	= "1"
+	EVENT_EDGE_DELETED	= "2"
+	EVENT_EDGE_OFFLINE	= "3"
+	EVENT_TWIN_CREATED	= "4"
+	EVENT_TWIN_ONLINE	= "5"
+	EVENT_TWIN_OFFLINE	= "6"
+	EVENT_TWIN_UPDATE	= "7"
+	EVENT_TWIN_DELETED	= "8"
 )
 
 type EventListener struct {
@@ -30,8 +38,61 @@ func NewEventListener(edgeID, twinID, eventID string,
 	}	
 }
 
+func (el *EventListener) DeleteEventListener(){
+	if el.NotifyCh != nil {
+		close(el.NotifyCh)
+	}
+}
+
 func (el *EventListener) MakeListenerID() string {
 	return el.EdgeID+"/"+el.TwinID+"/"+el.EventId
+}
+
+func (el *EventListener) SendEventNotify() {
+	event := el.EventId
+	notifyCh := el.NotifyCh
+
+	notifyCh<- event
+}
+
+func (el *EventListener) WaitEvent(callback func (interface{}))(error){
+	if el.TimeOut > 0 {
+		select {
+		case  <-time.After(el.TimeOut):
+			return errors.New("timeout!")
+		case v, ok := <-el.NotifyCh:
+			if !ok {
+				return errors.New("channel has been closed!")
+			}
+
+			callback(v)
+		}
+	}else{
+		v, ok := <-el.NotifyCh
+		if !ok {
+			return errors.New("channel has been closed!")
+		}
+
+		callback(v)
+	}
+
+	return nil
+}
+
+func (el *EventListener) WaitEventSeries(callback func (interface{}))(error){
+
+	for{
+		select {
+		case  <-time.After(el.TimeOut):
+			return nil
+		case v, ok := <-el.NotifyCh:
+			if !ok {
+				return errors.New("channel has been closed!")
+			}
+
+			callback(v)
+		}
+	}
 }
 
 /*
@@ -97,7 +158,8 @@ func (elm *EventListenerManager) DeleteEventListener(listener *EventListener) er
 	}
 	
 	elm.EventListenerMap.Delete(listenerID)
-	
+	listener.DeleteEventListener()
+
 	return nil	
 }
 
@@ -123,4 +185,20 @@ func UnregisterEventListener(listener **EventListener) error {
 	*listener = nil
 	
 	return err
+}
+
+/* Match the event and dispatch it. */
+func MatchEventAndDispatch(edgeID, twinID, eventID string) error {
+	listenerID := edgeID+"/"+twinID+"/"+eventID
+
+	listener := defaultListenerManager.GetEventListener(listenerID)
+	if listener == nil {
+		//No matched event, we just return.
+		return nil
+	}
+
+	/* matched, then we dispatch the event */
+	listener.SendEventNotify()
+
+	return nil
 }

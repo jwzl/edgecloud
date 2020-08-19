@@ -11,6 +11,7 @@ import(
 	"github.com/jwzl/beehive/pkg/core"
 	"github.com/jwzl/edgecloud/pkg/types"
 	"github.com/jwzl/beehive/pkg/core/context"
+	"github.com/jwzl/edgecloud/pkg/devicetwin/eventlistener"
 )
 
 const (
@@ -72,6 +73,10 @@ func (dtm *DeviceTwinModule) Start(c *context.Context) {
 			if !dtm.dtcontext.EdgeIsOnline(edgeID) { 
 				dtm.dtcontext.SetEdgeState(edgeID, EdgeStateOnline)
 				klog.Infof("edge %s is online", edgeID)
+
+				//notify the edge online event.
+				eventlistener.MatchEventAndDispatch(edgeID,
+					"", eventlistener.EVENT_EDGE_ONLINE)
 			}
 			// recieve the heartbeat.
 			dtm.dtcontext.DealHeartBeat(msg)
@@ -132,6 +137,9 @@ func (dtm *DeviceTwinModule) doUpStreamMessage(msg *model.Message) {
 			}
 	
 			klog.Infof("edge %s is online",edgeInfo.EdgeID)
+			//notify the edge online event.
+			eventlistener.MatchEventAndDispatch(edgeInfo.EdgeID,
+				"", eventlistener.EVENT_EDGE_ONLINE)
 		}else{
 			//If no cache such message, then, Ignore this message. 
 			if dtm.dtcontext.CacheHasThisMessage(msg) != true {

@@ -10,6 +10,7 @@ import (
 	"github.com/jwzl/wssocket/model"
 	"github.com/jwzl/edgecloud/pkg/types"
 	"github.com/jwzl/beehive/pkg/core/context"
+	"github.com/jwzl/edgecloud/pkg/devicetwin/eventlistener"
 )
 
 
@@ -110,6 +111,10 @@ func (dtc *DTContext) AddEdgeInfo(edged *EdgeDescription) error {
 	var edgeMutex	sync.Mutex
 	dtc.EdgeMutex.Store(edgeID, &edgeMutex)
 	dtc.EdgeMap.Store(edgeID, edged)
+
+	//notify the edge register event.
+	eventlistener.MatchEventAndDispatch(edgeID,
+		"", eventlistener.EVENT_EDGE_CREATED)
 
 	return nil
 }

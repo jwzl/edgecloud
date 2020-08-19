@@ -13,6 +13,7 @@ import (
 
 	"encoding/json"
 	"github.com/jwzl/edgeOn/common"
+	"github.com/jwzl/edgecloud/pkg/devicetwin/eventlistener"
 )
 
 const (
@@ -80,6 +81,10 @@ func (ed *EdgeDescription) FindTwins(twinID string) bool {
 func (ed *EdgeDescription) RegisterTwins(twinID string) error {
 	if ed.FindTwins(twinID) != true {
 		ed.deviceIDs = append(ed.deviceIDs, twinID)
+
+		//notify the twin register event.
+		eventlistener.MatchEventAndDispatch(ed.ID,
+			twinID, eventlistener.EVENT_TWIN_CREATED)
 		return nil
 	}
 
@@ -97,6 +102,10 @@ func (ed *EdgeDescription) UnRegisterTwins(twinID string) error {
 		}
 	}
 	
+	//notify the twin unregister event.
+	defer eventlistener.MatchEventAndDispatch(ed.ID,
+		twinID, eventlistener.EVENT_TWIN_DELETED)
+
 	return ed.DeleteTwin(twinID)
 }
 
@@ -168,6 +177,9 @@ func (ed *EdgeDescription) UpdateTwin(twin *common.DigitalTwin) error {
 		ed.TwinMutex.Store(twinID, &deviceMutex)
 
 		ed.Twins.Store(twinID, twin)
+		//notify the twin register event.
+		eventlistener.MatchEventAndDispatch(ed.ID,
+			twinID, eventlistener.EVENT_TWIN_CREATED)
 	} else {
 		// update twin
 		ed.Lock(twinID)
@@ -185,8 +197,21 @@ func (ed *EdgeDescription) UpdateTwin(twin *common.DigitalTwin) error {
 			oldTwin.Description = twin.Description
 		}
 		if len(twin.State) > 0 {
-			oldTwin.LastState = twin.State 
-			oldTwin.State = twin.State		
+			oldTwin.LastState = oldTwin.State
+			oldTwin.State = twin.State
+
+			if 	oldTwin.State != oldTwin.LastState {
+				var state_tmp string
+				if twin.State == common.DGTWINS_STATE_ONLINE {
+					state_tmp = eventlistener.EVENT_TWIN_ONLINE
+				}else{
+					state_tmp = eventlistener.EVENT_TWIN_OFFLINE
+				}
+
+				// notify the twin online/offline
+				eventlistener.MatchEventAndDispatch(ed.ID,
+					"", state_tmp)
+			}
 		}
 
 		//patch all metadata to oldTwin.
@@ -223,6 +248,9 @@ func (ed *EdgeDescription) UpdateTwin(twin *common.DigitalTwin) error {
 			}
 		}	
 
+		//notify the twin update event.
+		eventlistener.MatchEventAndDispatch(ed.ID,
+			twinID, eventlistener.EVENT_TWIN_UPDATE)
 	} 
 
 	return nil
