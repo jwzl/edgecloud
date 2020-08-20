@@ -10,7 +10,7 @@ package devicetwin
 import (
 	"sync"
 	"errors"
-
+	"k8s.io/klog"
 	"encoding/json"
 	"github.com/jwzl/edgeOn/common"
 	"github.com/jwzl/edgecloud/pkg/devicetwin/eventlistener"
@@ -170,16 +170,25 @@ func (ed *EdgeDescription) UpdateTwin(twin *common.DigitalTwin) error {
 		return errors.New("No such this twin")
 	}
 
+	klog.Infof("UpdateTwin")
 	_ , exist := ed.TwinMutex.Load(twinID)
 	if !exist {
+		klog.Infof("UpdateTwin Create twin")
 		//Create twin
 		var deviceMutex	sync.Mutex
 		ed.TwinMutex.Store(twinID, &deviceMutex)
 
 		ed.Twins.Store(twinID, twin)
-		//notify the twin register event.
+		var state_tmp string
+		if twin.State == common.DGTWINS_STATE_ONLINE {
+			state_tmp = eventlistener.EVENT_TWIN_ONLINE
+		}else{
+			state_tmp = eventlistener.EVENT_TWIN_OFFLINE
+		}
+		klog.Infof("UpdateTwin Create twin XXXX", state_tmp)
+		// notify the twin online/offline
 		eventlistener.MatchEventAndDispatch(ed.ID,
-			twinID, eventlistener.EVENT_TWIN_CREATED)
+			twinID, state_tmp)
 	} else {
 		// update twin
 		ed.Lock(twinID)
@@ -200,6 +209,7 @@ func (ed *EdgeDescription) UpdateTwin(twin *common.DigitalTwin) error {
 			oldTwin.LastState = oldTwin.State
 			oldTwin.State = twin.State
 
+			klog.Infof("update twin state(new, last)", oldTwin.State, oldTwin.LastState)
 			if 	oldTwin.State != oldTwin.LastState {
 				var state_tmp string
 				if twin.State == common.DGTWINS_STATE_ONLINE {
@@ -210,7 +220,7 @@ func (ed *EdgeDescription) UpdateTwin(twin *common.DigitalTwin) error {
 
 				// notify the twin online/offline
 				eventlistener.MatchEventAndDispatch(ed.ID,
-					"", state_tmp)
+					twinID, state_tmp)
 			}
 		}
 

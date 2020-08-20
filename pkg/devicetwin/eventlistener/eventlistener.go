@@ -3,7 +3,8 @@ package eventlistener
 import(
 	"sync"
 	"time"
-	"errors"	
+	"errors"
+	"k8s.io/klog"
 )
 
 const (
@@ -65,7 +66,11 @@ func (el *EventListener) WaitEvent(callback func (interface{}))(error){
 				return errors.New("channel has been closed!")
 			}
 
-			callback(v)
+			klog.Infof("WaitEvent  @@@@",callback)
+			if callback != nil {
+				callback(v)
+			}
+			klog.Infof("WaitEvent  YYYYYYYYYYYYYYYYY",callback)
 		}
 	}else{
 		v, ok := <-el.NotifyCh
@@ -73,7 +78,9 @@ func (el *EventListener) WaitEvent(callback func (interface{}))(error){
 			return errors.New("channel has been closed!")
 		}
 
-		callback(v)
+		if callback != nil {
+			callback(v)
+		}
 	}
 
 	return nil
@@ -90,7 +97,9 @@ func (el *EventListener) WaitEventSeries(callback func (interface{}))(error){
 				return errors.New("channel has been closed!")
 			}
 
-			callback(v)
+			if callback != nil {
+				callback(v)
+			}
 		}
 	}
 }
@@ -180,9 +189,9 @@ func RegisterEventListener(edgeID, twinID, eventID string,
 }
 
 /* unregister the event listener.*/
-func UnregisterEventListener(listener **EventListener) error {
-	err := defaultListenerManager.DeleteEventListener(*listener)
-	*listener = nil
+func UnregisterEventListener(listener *EventListener) error {
+	err := defaultListenerManager.DeleteEventListener(listener)	
+	//*listener = nil
 	
 	return err
 }
@@ -201,4 +210,24 @@ func MatchEventAndDispatch(edgeID, twinID, eventID string) error {
 	listener.SendEventNotify()
 
 	return nil
+}
+
+/* Watch the event.*/
+func WatchEvent(edgeID, twinID, eventID string, 
+			timeOut time.Duration, callback func (interface{})) error {
+
+	listener, err := RegisterEventListener(edgeID, twinID, eventID, timeOut)
+	if err != nil {
+		return err
+	}
+
+	klog.Infof("WatchEvent  @@@@",callback)
+	err = listener.WaitEvent(callback)
+	if err != nil {
+		return err
+	}
+
+	err = UnregisterEventListener(listener)
+	klog.Infof("XXXXXXXXXXXXXYYYYYYYYYYYYYYYYYYYYYYZZZZZZZZZZZZZZZZZZZZZZz")
+	return err 
 }

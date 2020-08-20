@@ -1,10 +1,13 @@
 package apis
 
 import (
+	"time"
 	"errors"
+	"k8s.io/klog"
 	"github.com/jwzl/edgeOn/common"
 	"github.com/jwzl/edgecloud/pkg/types"
-	"github.com/jwzl/beehive/pkg/core/context"	
+	"github.com/jwzl/beehive/pkg/core/context"
+	"github.com/jwzl/edgecloud/pkg/devicetwin/eventlistener"
 )
 
 type DeviceTwinModule struct {
@@ -50,6 +53,13 @@ func BindEdge(edgeID string) (int, string) {
 		return common.InternalErrorCode, "Channel has closed"
 	}
 
+	//wait the edge online.
+	err := eventlistener.WatchEvent(edgeID, "", eventlistener.EVENT_EDGE_ONLINE, 
+			500 * time.Millisecond, nil)
+	if err != nil {
+		return common.InternalErrorCode, err.Error()
+	}
+
 	return resp.Code, resp.Reason
 }
 
@@ -64,6 +74,14 @@ func CreateTwin(edgeID, twinID string) (int, string){
 		return common.InternalErrorCode, "Channel has closed"
 	}
 
+	//wait the edge online.
+	klog.Infof("XXXXXXXXX")
+	err := eventlistener.WatchEvent(edgeID, twinID, eventlistener.EVENT_TWIN_ONLINE, 
+			500 * time.Millisecond, nil)
+	klog.Infof("sdsd %s",err.Error())
+	if err != nil {
+		return common.InternalErrorCode, err.Error()
+	}
 	return resp.Code, resp.Reason	 
 }
 
