@@ -75,11 +75,11 @@ func CreateTwin(edgeID, twinID string) (int, string){
 	}
 
 	//wait the edge online.
-	klog.Infof("XXXXXXXXX")
 	err := eventlistener.WatchEvent(edgeID, twinID, eventlistener.EVENT_TWIN_ONLINE, 
 			500 * time.Millisecond, nil)
-	klog.Infof("sdsd %s",err.Error())
+	
 	if err != nil {
+		klog.Infof("sdsd %s",err.Error())	
 		return common.InternalErrorCode, err.Error()
 	}
 	return resp.Code, resp.Reason	 

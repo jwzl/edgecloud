@@ -4,7 +4,7 @@ import(
 	"sync"
 	"time"
 	"errors"
-	"k8s.io/klog"
+	_"k8s.io/klog"
 )
 
 const (
@@ -66,11 +66,9 @@ func (el *EventListener) WaitEvent(callback func (interface{}))(error){
 				return errors.New("channel has been closed!")
 			}
 
-			klog.Infof("WaitEvent  @@@@",callback)
 			if callback != nil {
 				callback(v)
 			}
-			klog.Infof("WaitEvent  YYYYYYYYYYYYYYYYY",callback)
 		}
 	}else{
 		v, ok := <-el.NotifyCh
@@ -221,13 +219,10 @@ func WatchEvent(edgeID, twinID, eventID string,
 		return err
 	}
 
-	klog.Infof("WatchEvent  @@@@",callback)
 	err = listener.WaitEvent(callback)
 	if err != nil {
 		return err
 	}
 
-	err = UnregisterEventListener(listener)
-	klog.Infof("XXXXXXXXXXXXXYYYYYYYYYYYYYYYYYYYYYYZZZZZZZZZZZZZZZZZZZZZZz")
-	return err 
+	return UnregisterEventListener(listener)
 }
