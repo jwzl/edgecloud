@@ -215,31 +215,31 @@ func (dtm *DeviceTwinModule) doDownStreamMessage(msg *model.Message) {
 			dtm.dtcontext.CacheMessage(msg)	
 		
 			//reply the message.
-			resp := types.BuildMessageResponse(common.RequestSuccessCode, "successful", nil)
+			resp := types.BuildResponse(common.RequestSuccessCode, "successful", nil)
 			replyChn <- *resp
 		} else {
-			resp := types.BuildMessageResponse(201, "edge has already bind", nil)
+			resp := types.BuildResponse(201, "edge has already bind", nil)
 			replyChn <- *resp
 		}
 	case common.DGTWINS_OPS_CREATE:
 		twinID, isthisType := msg.GetContent().(string)
 		if !isthisType {
 			klog.Warningf("Error format")
-			resp := types.BuildMessageResponse(400, "error format", nil)
+			resp := types.BuildResponse(400, "error format", nil)
 			replyChn <- *resp
 			return
 		}
 		err := dtm.dtcontext.RegisterTwins(edgeID, twinID)
 		if err != nil {
 			klog.Warningf("no such edge info/already register")
-			resp := types.BuildMessageResponse(201, "already register", nil)
+			resp := types.BuildResponse(201, "already register", nil)
 			replyChn <- *resp
 			return
 		}
 		
 		// response the successful message.
 		//reply the message.
-		resp := types.BuildMessageResponse(common.RequestSuccessCode, "Create twin successful", nil)
+		resp := types.BuildResponse(common.RequestSuccessCode, "Create twin successful", nil)
 		replyChn <- *resp
 
 		// Send create twin message.
@@ -271,7 +271,7 @@ func (dtm *DeviceTwinModule) doDownStreamMessage(msg *model.Message) {
 		//cache the message.
 		dtm.dtcontext.CacheMessage(msg)	
 		//reply the message.
-		resp := types.BuildMessageResponse(common.RequestSuccessCode, "Update successful", nil)
+		resp := types.BuildResponse(common.RequestSuccessCode, "Update successful", nil)
 		replyChn <- *resp
 	case common.DGTWINS_OPS_DELETE:
 		/*
@@ -302,7 +302,7 @@ func (dtm *DeviceTwinModule) doDownStreamMessage(msg *model.Message) {
 		//cache the message.
 		dtm.dtcontext.CacheMessage(msg)	
 		//reply the message.
-		resp := types.BuildMessageResponse(common.RequestSuccessCode, "Update successful", nil)
+		resp := types.BuildResponse(common.RequestSuccessCode, "Update successful", nil)
 		replyChn <- *resp			
 	case common.DGTWINS_OPS_GET:
 		/*
@@ -331,11 +331,31 @@ func (dtm *DeviceTwinModule) doDownStreamMessage(msg *model.Message) {
 		}
 
 		//reply the message.
-		resp := types.BuildMessageResponse(common.RequestSuccessCode, "Get", twins)
+		resp := types.BuildResponse(common.RequestSuccessCode, "Get", twins)
 		replyChn <- *resp
+	case common.DGTWINS_OPS_List:
+		/* List the twins*/
+		if	edgeID != "all" {
+			//get all twins in this edge.
+			twins, err := dtm.dtcontext.ListTwins(edgeID)
+			if err != nil {
+				//send the failed
+				resp := types.BuildResponse(common.InternalErrorCode, "List", err.Error())
+				replyChn <- *resp
+				return
+			}	
+			
+			resp := types.BuildResponse(common.RequestSuccessCode, "List", twins)
+			replyChn <- *resp
+		}else{
+			// get edges.
+			edgeds := dtm.dtcontext.ListEdgeInfo()
+			resp := types.BuildResponse(common.RequestSuccessCode, "List", edgeds) 
+			replyChn <- *resp	
+		}
 	default:
 		klog.Warningf("Ignored message:", msg)
-		resp := types.BuildMessageResponse(common.BadRequestCode, "Ignored", nil)
+		resp := types.BuildResponse(common.BadRequestCode, "Ignored", nil)
 		replyChn <- *resp
 	}
 }

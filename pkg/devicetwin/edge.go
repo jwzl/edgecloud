@@ -51,7 +51,9 @@ func NewEdgeDescription(edgeID string) *EdgeDescription {
 	}
 }
 
-
+func (ed *EdgeDescription) GetDeviceIDs() []string {
+	return ed.deviceIDs
+}
 func (ed *EdgeDescription) SetEdgeName(name string) {
 	ed.Name = name
 }
@@ -121,6 +123,24 @@ func (ed *EdgeDescription) getTwin (twinID string) (*common.DigitalTwin, bool) {
 	}
 
 	return twin, true
+}
+
+/* List twins */
+func (ed *EdgeDescription) ListTwins () []common.DigitalTwin {
+	twins := make([]common.DigitalTwin, 0)
+	
+	ed.Twins.Range(func(_, value interface{}) bool{
+		twin := value.(*common.DigitalTwin)
+		bytes, _ := json.Marshal(twin)
+		
+		var dgTwin common.DigitalTwin
+		json.Unmarshal(bytes, &dgTwin)
+		twins = append(twins, dgTwin)
+		
+		return true
+	})
+	
+	return twins
 }
 
 //getTwinMutex get the twin mutex

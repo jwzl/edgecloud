@@ -160,6 +160,8 @@ github.com/jwzl/edgeOn v0.0.0-20200320084253-a6b9a6cbaa35 h1:QJxxtnQrDAsVcZf8KzW
 github.com/jwzl/edgeOn v0.0.0-20200320084253-a6b9a6cbaa35/go.mod h1:3eaQnD0tgJFaLHwO3BUXJ6L/RsPqVql5nd7GxG6oZ6M=
 github.com/jwzl/edgeOn v0.0.0-20200402083535-9ef0b8b7ff25 h1:2/ak4BHJi6TPobkgrW3FV9HAEWw5x2OJXltfz0/BT6g=
 github.com/jwzl/edgeOn v0.0.0-20200402083535-9ef0b8b7ff25/go.mod h1:3eaQnD0tgJFaLHwO3BUXJ6L/RsPqVql5nd7GxG6oZ6M=
+github.com/jwzl/edgeOn v0.0.0-20200823073932-3426a430826e h1:KKLh9z7VWu50vmZFDiQOyCALCO8M9AYUjU/vFoy2OOg=
+github.com/jwzl/edgeOn v0.0.0-20200823073932-3426a430826e/go.mod h1:3eaQnD0tgJFaLHwO3BUXJ6L/RsPqVql5nd7GxG6oZ6M=
 github.com/jwzl/mqtt v0.0.0-20200310015455-e512045b0629 h1:uQmERwLPcqw5X6wsTuzU67xbcQoFGuPsJxMi4U5GZjs=
 github.com/jwzl/mqtt v0.0.0-20200310015455-e512045b0629/go.mod h1:milu45o49EJdWeV4drWsnKEMxwiIVVl5sKlevqv5TgY=
 github.com/jwzl/mqtt v1.3.0 h1:mj8cmgSPWwFm+/8Y2dv1szGVqOZC5rpzFN1EytJJaCQ=

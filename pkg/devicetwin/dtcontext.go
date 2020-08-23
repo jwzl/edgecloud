@@ -120,6 +120,31 @@ func (dtc *DTContext) AddEdgeInfo(edged *EdgeDescription) error {
 }
 
 /*
+* List edge info.
+*/
+func (dtc *DTContext) ListEdgeInfo() []types.EdgeInfo {
+	edgeds := make([]types.EdgeInfo, 0)
+	
+	dtc.EdgeMap.Range(func(_, value interface{}) bool{
+		edged := value.(*EdgeDescription)
+		if edged == nil {
+			return true
+		}
+		
+		edgeds = append(edgeds, types.EdgeInfo{
+			ID: edged.ID,
+			Name: edged.Name,
+			Description: edged.Description,
+			State: 	edged.State,
+			DeviceIDs: edged.GetDeviceIDs(),
+		})
+		
+		return true
+	})
+	
+	return edgeds
+}
+/*
 * Edge is online?
 */
 func (dtc *DTContext) EdgeIsOnline(edgeID string) bool {
@@ -226,6 +251,18 @@ func (dtc *DTContext) GetRawTwin(edgeID, twinID string) ([]byte, error) {
 	}
 
 	return edged.GetRawTwin(twinID)
+}
+
+func (dtc *DTContext) ListTwins (edgeID string) ([]common.DigitalTwin, error) {
+	dtc.Lock(edgeID)
+	defer dtc.Unlock(edgeID)
+	
+	edged, err := dtc.GetEdgeInfo(edgeID)
+	if err != nil {
+		return nil, err
+	}
+	
+	return edged.ListTwins(), nil
 }
 
 //SendResponseMessage Send Response conten.

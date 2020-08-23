@@ -59,7 +59,7 @@ func DeleteTwinApi(c *gin.Context) {
 	}
 }
 
-//Get /get?edgeID=001&twinID=001
+//Get /edge/twin?edgeID=001&twinID=001
 func GetTwinApi(c *gin.Context) {
 	AddCors(c)
 	edgeId := c.Query("edgeid")
@@ -69,10 +69,39 @@ func GetTwinApi(c *gin.Context) {
 		return 
 	}
 
-	if dgTwin, err := GetTwin(edgeId, twinId); err != nil {
+	if twins, err := GetTwin(edgeId, twinId); err != nil {
 		c.JSON(http.StatusBadRequest, err.Error())
 		return 
 	} else {
-		c.JSON(http.StatusOK, dgTwin);
+		c.JSON(http.StatusOK, twins);
 	}
 }
+
+//Get /dev/list?edgeID=001
+func ListTwinApi(c *gin.Context) {
+	AddCors(c)
+	edgeId := c.Query("edgeid")
+	if edgeId == "" {
+		c.JSON(http.StatusBadRequest, "edgeid is empty")
+		return 
+	}
+	if twins, err := ListTwins(edgeId); err != nil {
+		c.JSON(http.StatusBadRequest, err.Error())
+		return 
+	} else {
+		c.JSON(http.StatusOK, twins);
+	}
+	
+}
+
+//Get /edge/list
+func ListEdgeApi(c *gin.Context) {
+	AddCors(c)
+	
+	if edges, err := ListEdge(); err != nil {
+		c.JSON(http.StatusBadRequest, err.Error())
+		return 
+	} else {
+		c.JSON(http.StatusOK, edges);
+	}	
+}		

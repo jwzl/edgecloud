@@ -9,5 +9,6 @@ func InitEdgeRouter(Router *gin.RouterGroup) {
 	EdgeRouter := Router.Group("edge")
 	{
 		EdgeRouter.POST("/bind", apis.BindEdgeApi)
+		EdgeRouter.GET("/list", apis.ListEdgeApi)
 	}
 }
