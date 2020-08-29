@@ -69,11 +69,11 @@ func GetTwinApi(c *gin.Context) {
 		return 
 	}
 
-	if twins, err := GetTwin(edgeId, twinId); err != nil {
+	if twin, err := GetTwin(edgeId, twinId); err != nil {
 		c.JSON(http.StatusBadRequest, err.Error())
 		return 
 	} else {
-		c.JSON(http.StatusOK, twins);
+		c.JSON(http.StatusOK, twin);
 	}
 }
 

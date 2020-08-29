@@ -137,7 +137,7 @@ func UpdateProperty(edgeID, twinID string, desired map[string]*common.TwinProper
 
 
 //path: /edge/twin?edgeid=xxx&twinid=xxx
-func GetTwin(edgeID, twinID string) ([]common.DigitalTwin, error){
+func GetTwin(edgeID, twinID string) (*common.DigitalTwin, error){
 	resp, err := devTM.SendMessage(edgeID, common.TwinModuleName,
 			 common.DGTWINS_OPS_GET, common.DGTWINS_RESOURCE_TWINS, []string{twinID})
 	if err != nil {
@@ -147,7 +147,7 @@ func GetTwin(edgeID, twinID string) ([]common.DigitalTwin, error){
 		return nil, errors.New(resp.Reason)
 	}
 	twins := resp.Content.([]common.DigitalTwin)
-	return twins, nil
+	return &twins[0], nil
 } 
 
 //path: /dev/list?edgeid=xxx
